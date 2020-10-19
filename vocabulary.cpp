@@ -1,11 +1,15 @@
-#include <cstring>
+﻿#include <cstring>
 #include <cstdio>
 #include <algorithm>
 #include <iostream>
 #include <map>
 #include <vector>
 #include <string>
+#include <random>
+#include <cmath>
+
 using namespace std;
+
 int main(int argc, char* argv[])
 {
     if(argc < 2)
@@ -27,7 +31,7 @@ int main(int argc, char* argv[])
 
     fclose(fp);
 
-    const char* sep = "\n";
+    const char* sep = "\r\n";
     char* start = &buffer[0];
     std::map<string, int> vocabularyCount;
 
@@ -87,5 +91,63 @@ int main(int argc, char* argv[])
 
     }
     fclose(fp2);
+
+	string randWordFile(argv[1]);
+    randWordFile.append("-random.txt");
+    FILE* fp3 = fopen(randWordFile.c_str(), "w");
+
+   
+	std::random_device rd;  //Will be used to obtain a seed for the random number engine
+	std::mt19937 gen(rd()); //Standard mersenne_twister_engine seeded with rd()
+	std::uniform_real_distribution<> dis(0, 1.0);
+    auto Si = [&](int weight)
+    {
+        double r;
+        do
+        {
+            r = dis(gen);
+        } while (r == 0.0);
+        return pow(r, 1.0 / weight);
+    };
+
+	vector<pair<double, string>> weightedAndOrdered;
+	for (auto& word_and_count : vocabularyCount)
+	{
+        weightedAndOrdered.push_back({ Si(word_and_count.second), word_and_count.first });
+	}
+
+	sort(begin(weightedAndOrdered), end(weightedAndOrdered), [](const pair<double, string>& left, const pair<double, string>& right) {
+		if (left.first < right.first)
+		{
+			return false;
+		}
+		else if (left.first == right.first)
+		{
+			return left.second < right.second;
+		}
+		else
+		{
+			return true;
+		}
+		});
+
+    int count = 0;
+	for (auto& elem : weightedAndOrdered)
+	{
+        if (count < 350)
+        {
+			char buf[50] = { 0 };
+			snprintf(buf, sizeof buf, "%s\n", &elem.second.c_str()[0]);
+			fwrite(&buf[0], sizeof(buf[0]), strlen(buf), fp3);
+            cout << elem.first << endl;
+            count++;
+        }
+        else
+        {
+            break;
+        }
+	}
+
+    fclose(fp3);
     return 0;
 }
